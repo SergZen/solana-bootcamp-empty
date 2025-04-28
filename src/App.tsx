@@ -107,7 +107,7 @@ const App: React.FC = () => {
     } catch (e) {
       toast.error("Error taking offer");
     } finally {
-      queryClient.invalidateQueries({ queryKey: ["offers"] });
+      await queryClient.invalidateQueries({queryKey: ["offers"]});
       setLoading(false);
     }
   };
