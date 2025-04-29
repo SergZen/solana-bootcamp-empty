@@ -7,11 +7,11 @@ import { Escrow } from "./idlType";
 import { config } from "./config";
 import {randomBytes} from "crypto";
 import {
-    getAssociatedTokenAddressSync,
-    TOKEN_PROGRAM_ID
+  getAssociatedTokenAddressSync,
+  TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID
 } from "@solana/spl-token";
-
-const TOKEN_PROGRAM = TOKEN_PROGRAM_ID;
+import {toast} from "sonner";
 
 export class EscrowProgram {
   protected program: Program<Escrow>;
@@ -45,6 +45,17 @@ export class EscrowProgram {
     tokenAmountB: number
   ) {
     try {
+      const tokenProgramA = await this.getTokenProgramId(tokenMintA);
+      const tokenProgramB = await this.getTokenProgramId(tokenMintB);
+
+      if (!tokenProgramA.equals(tokenProgramB)) {
+        let errorMessage = "Both tokens must use the same token program standard (TOKEN or TOKEN_2022)";
+        toast(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const tokenProgram = tokenProgramA;
+
       const offerId = new BN(randomBytes(8));
       const offerAddress = this.createOfferId(offerId);
 
@@ -52,21 +63,21 @@ export class EscrowProgram {
         tokenMintA,
         offerAddress,
         true,
-        TOKEN_PROGRAM
+        tokenProgram
       );
 
       const makerTokenAccountA = getAssociatedTokenAddressSync(
         tokenMintA,
         this.wallet.publicKey,
         true,
-        TOKEN_PROGRAM
+        tokenProgram
       );
 
       const makerTokenAccountB = getAssociatedTokenAddressSync(
         tokenMintB,
         this.wallet.publicKey,
         true,
-        TOKEN_PROGRAM
+        tokenProgram
       );
 
       const accounts = {
@@ -81,7 +92,7 @@ export class EscrowProgram {
 
       const txInstruction = await this.program.methods
         .makeOffer(offerId, new BN(tokenAmountA),new BN(tokenAmountB))
-        .accounts({ ...accounts, tokenProgram: TOKEN_PROGRAM })
+        .accounts({ ...accounts, tokenProgram })
         .instruction();
 
       const messageV0 = new web3.TransactionMessage({
@@ -113,32 +124,43 @@ export class EscrowProgram {
     tokenMintB: PublicKey
   ) {
     try {
+      const tokenProgramA = await this.getTokenProgramId(tokenMintA);
+      const tokenProgramB = await this.getTokenProgramId(tokenMintB);
+
+      if (!tokenProgramA.equals(tokenProgramB)) {
+        let errorMessage = "Both tokens must use the same token program standard (TOKEN or TOKEN_2022)";
+        toast(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const tokenProgram = tokenProgramA;
+
       const takerTokenAccountA = getAssociatedTokenAddressSync(
           tokenMintA,
           this.wallet.publicKey,
           true,
-          TOKEN_PROGRAM
+          tokenProgram
       );
 
       const takerTokenAccountB = getAssociatedTokenAddressSync(
           tokenMintB,
           this.wallet.publicKey,
           true,
-          TOKEN_PROGRAM
+          tokenProgram
       );
 
       const makerTokenAccountB = getAssociatedTokenAddressSync(
           tokenMintB,
           maker,
           true,
-          TOKEN_PROGRAM
+          tokenProgram
       );
 
       const vault = getAssociatedTokenAddressSync(
           tokenMintA,
           offer,
           true,
-          TOKEN_PROGRAM
+          tokenProgram
       );
 
       const accounts = {
@@ -148,7 +170,7 @@ export class EscrowProgram {
           takerTokenAccountA,
           takerTokenAccountB,
           vault,
-          tokenProgram: TOKEN_PROGRAM,
+          tokenProgram,
           makerTokenAccountB,
       };
 
@@ -177,6 +199,25 @@ export class EscrowProgram {
     } catch (e) {
       console.log(e);
       return null;
+    }
+  }
+
+  async getTokenProgramId(mint: PublicKey): Promise<PublicKey> {
+    try {
+      const accountInfo = await this.connection.getAccountInfo(mint);
+      if (!accountInfo) {
+        throw new Error(`Failed to get account info for mint: ${mint.toString()}`);
+      }
+      if (accountInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+        return TOKEN_2022_PROGRAM_ID;
+      } else if (accountInfo.owner.equals(TOKEN_PROGRAM_ID)) {
+        return TOKEN_PROGRAM_ID;
+      } else {
+        throw new Error(`Mint ${mint.toString()} is not owned by a recognized token program`);
+      }
+    } catch (e) {
+      console.error("Error determining token program ID:", e);
+      throw e;
     }
   }
 }
