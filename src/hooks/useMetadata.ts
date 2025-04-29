@@ -115,10 +115,6 @@ async function fetchTokenMetadata(
         }
       }
 
-      if (!metadata.decimals) {
-        throw new Error("No metadata found");
-      }
-
       return {
         address: mintAddress,
         symbol: metadata.symbol || "UNKNOWN",

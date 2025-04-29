@@ -20,6 +20,7 @@ import { Wallet } from "@coral-xyz/anchor";
 import { OffersPage } from "@/pages/all-offers";
 import { OpenOffersPage } from "@/pages/open-offers";
 import AccountOffers from "@/pages/account-offers";
+import AccountTokens from "@/pages/account-tokens";
 import { Offer } from "@/types/offer";
 
 import { Toaster } from "sonner";
@@ -49,6 +50,7 @@ const App: React.FC = () => {
     orders: 1,
     openOffers: 1,
     accountOffers: 1,
+    accountTokens: 1,
   });
 
   const { connect, connected, publicKey, disconnect, select, wallets } =
@@ -136,10 +138,11 @@ const App: React.FC = () => {
           Password: {createPass(walletAddress)}
         </h2>
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="orders">All Offers</TabsTrigger>
             <TabsTrigger value="openOffers">Open Offers</TabsTrigger>
             <TabsTrigger value="accountOffers">Account Offers</TabsTrigger>
+            <TabsTrigger value="accountTokens">Account Tokens</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders">
@@ -164,6 +167,15 @@ const App: React.FC = () => {
 
           <TabsContent value="accountOffers">
             <AccountOffers
+              isWalletConnected={isWalletConnected}
+              disconnect={disconnect}
+              setIsWalletConnected={setIsWalletConnected}
+              loading={loading}
+            />
+          </TabsContent>
+
+          <TabsContent value="accountTokens">
+            <AccountTokens
               isWalletConnected={isWalletConnected}
               disconnect={disconnect}
               setIsWalletConnected={setIsWalletConnected}
